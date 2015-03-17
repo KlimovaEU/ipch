@@ -38,7 +38,8 @@ Point inters(struct sphere sph, int i, int j,int n)
 
 Point planeInters ( Point c1, Point c2,Point l3,Point l4)
 {
-	//точка пересечения двух линий,где каждая задана двумя точками
+	//intersection point of two lines
+	//every line is represented by two points
 	double a1,b1,a2,b2,c,d;
 	if (abs(c1.x-c2.x)>0)
 		a1=(c1.y -c2.y)/(c1.x-c2.x);
@@ -64,7 +65,7 @@ double squareTriangle(Point a, Point b, Point c)
 }
 
 bool belong_to_quad ( struct quad q , Point a)
-{// проверка принадлежности точки четырехугольнику
+{// checking - intersection point belongs to the quad or not
 	bool b;
 	double s1,s2;
 	s1 = squareTriangle(q.a, q.b, q.c)+squareTriangle(q.a, q.b,q.d);
@@ -114,9 +115,9 @@ int main(int argc, char** argv)
 	}
 
 	Point pt3,pt2;
-	const int n=30;    // количество меридиан
+	const int n=30;    // ГЄГ®Г«ГЁГ·ГҐГ±ГІГўГ® Г¬ГҐГ°ГЁГ¤ГЁГ Г­
 	const int nn =n*n; 
-	struct sphere sph; // координаты центра (x,y) и диаметр
+	struct sphere sph; // ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ» Г¶ГҐГ­ГІГ°Г  (x,y) ГЁ Г¤ГЁГ Г¬ГҐГІГ°
 	sph.x =int( cdst.cols /2);
 	sph.y =int( cdst.rows /2);
 	sph.d = 1000;
@@ -128,13 +129,13 @@ int main(int argc, char** argv)
 	vector<vector<int>> coord;
 	quad q;
 	//
-	// заполнение массива четырехугольников значениями координат углов
+	// filling vector of quad coordinates
 	//
 	for (int i=1; i<n; i++) 
 	{
 		for (int j=1; j<n; j++)
 		{
-			// пересечение сферы и плоскости
+			
 			q.s = 0;
 			q.a = inters(sph,i,j,n);  
 			q.b = inters(sph,i,j+1,n);  
@@ -166,7 +167,7 @@ int main(int argc, char** argv)
 	index_list.clear();
 	//dst.release();
 	//
-	//поиск пересечений
+	//intersection search
 	//
 	
 	for( auto i = lines.begin(); i!=lines.end(); i++)
@@ -175,7 +176,7 @@ int main(int argc, char** argv)
 			for(auto j =i+1; j != lines.end(); j++) 
 			{
 				Vec4i p = *j;
-				pt2=planeInters(Point(l[0],l[1]),Point(l[2],l[3]),Point(p[0],p[1]),Point(p[2],p[3])); // точка пересечения двух прямых в плоскости 
+				pt2=planeInters(Point(l[0],l[1]),Point(l[2],l[3]),Point(p[0],p[1]),Point(p[2],p[3])); 
 				
 				if (pt2.y<0)
 					ind = 0;
@@ -186,7 +187,7 @@ int main(int argc, char** argv)
 					i_l=coord[ind];
 				for (size_t k= 0; k <i_l.size(); k++) 
 				{
-					if (belong_to_quad(quadVector[i_l[k]],pt2)) // проверка принадлежности точки четырехугольнику
+					if (belong_to_quad(quadVector[i_l[k]],pt2)) 
 					{
 							quadVector[i_l[k]].s++;
 							break;
@@ -194,7 +195,7 @@ int main(int argc, char** argv)
 				}
 			 }               
 	}
-	//поиск максимумов
+	//maximum search 
 	int ind1=0, ind2=0,ind3 =0;
 	int max1=quadVector[0].s;
 	int max2=quadVector[0].s;
