@@ -227,7 +227,7 @@ int main(int argc, char** argv)
 	}
 	coord_xrows.push_back(i_l);
 	i_l.clear();
-    coord_xrows.push_back(ix_r1);
+        coord_xrows.push_back(ix_r1);
 	ix_r1.clear();
 	index_list.clear();
 	// filling coord (the main part of classification)
