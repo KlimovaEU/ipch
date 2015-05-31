@@ -337,10 +337,11 @@ vector<Point> max_search(int n, vector<vector<quad>> quadVector)
 			cout<<ind2.x<<" "<<ind2.y<<endl;
 			return r;
 }
+
 int main(int argc, char** argv)
 {
-	const char* filename = argc >= 2 ? argv[1] : "test1.jpeg";
-//	Mat src = imread(filename,0);    
+	const char* filename = argc > 1 ? argv[1] : "test1.jpeg";
+	//	Mat src = imread(filename,0);    
 	Mat src =image_return( filename);
 	Point pt3,pt2;
 	Mat dst, abs_dst,gray,cdst;
@@ -352,12 +353,13 @@ int main(int argc, char** argv)
 	vector<Vec4i> lines;
 	HoughLinesP(dst, lines, 1, CV_PI/180, 50, 20, 10 );
 	cout<<dst.cols<<" "<<dst.rows<<endl;
-	double h;
+	double h=dst.cols/50;
 	vector<Point> a_begin,a_end;
 	for( size_t i = 0; i < lines.size(); i++ )
 	{   
 		Vec4i l = lines[i];
-		line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 4, CV_AA);
+		if (h<length(Point(l[0], l[1]),Point(l[2], l[3])))
+			line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 4, CV_AA);
 
 	}	
 	const int n=30;    // number of meridians
@@ -393,224 +395,104 @@ int main(int argc, char** argv)
 			q.b = inters(sph,i,j+1,n);  
 			q.c = inters(sph,i+1,j,n);
 			q.d = inters(sph,i+1,j+1,n); 
-
-			line( cdst, q.a, q.b, Scalar( 150,0,150 ),  2, 8 );
-			line( cdst, q.a, q.c, Scalar( 150,0,150 ),  2, 8 );
-			line( cdst, q.d, q.c, Scalar( 150,0,150 ),  2, 8 );
-			line( cdst, q.d, q.b, Scalar( 150,0,150 ),  2, 8 );
+			if(i==14)
+			{
+				line( cdst, q.a, q.b, Scalar( 150,0,150 ),  2, 8 );
+				line( cdst, q.a, q.c, Scalar( 150,0,150 ),  2, 8 );
+				line( cdst, q.d, q.c, Scalar( 150,0,150 ),  2, 8 );
+				line( cdst, q.d, q.b, Scalar( 150,0,150 ),  2, 8 );
+			}
 			quadVector[i-1][j]=q;
 			cout<<i-1<<" "<<j<<endl;
 		}
 	}
 
-	// regularization  of quadVector by y-coord 
-
-	for( int j = 0; j <n; j++)
-		for (int i=1; i<n/2; i++)
+	for( auto i = lines.begin(); i!=lines.end(); i++)
+	{
+		Vec4i l = *i;     
+		for(auto j =i+1; j != lines.end(); j++) 
 		{
-			i--;
-			//отдельно запоминаем те quadVector, которые лежат выше изображения
-			if (quadVector[i][j].a.y <=0||quadVector[i][j].b.y<=0||
-				quadVector[i][j].c.y<=0||quadVector[i][j].d.y<=0)
-			{	
-				ix_l.push_back(Point(i,j));
+			Vec4i p = *j; 
+			pt2=planeInters(Point(l[0],l[1]),Point(l[2],l[3]),Point(p[0],p[1]),Point(p[2],p[3])); // точка пересечения двух прямых в плоскости 
 
-			}				
-
-			//отдельно запоминаем те quadVector, которые лежат ниже изображения
-			if (quadVector[i][j].a.y>=cdst.rows ||quadVector[i][j].c.y>=cdst.rows||
-				quadVector[i][j].b.y>=cdst.rows ||quadVector[i][j].d.y>=cdst.rows)
-			{			
-				ix_r.push_back(Point(i,j));			
-			}	
-			i++;
-		}
-		// 
-		//  coord_x0- vector that saves coordinates of quadVector(with any_point.y<0)
-		coord_x0.push_back(ix_l);
-		ix_l.clear();
-
-		coord_x0.push_back(ix_r);
-		ix_r.clear();
-		i_l.clear();
-
-		// filling coord (the main part of classification)
-
-
-		for (int k = 1; k<=(cdst.rows/step); k++)
-		{
-			for( int j = 0; j <n; j++)
-				for (int i=1; i<n/2; i++)
-				{
-					i--;
-					if (quadVector[i][j].a.y <=k*step && quadVector[i][j].a.y>=(k-1)*step || quadVector[i][j].c.y <k*step && quadVector[i][j].c.y>=(k-1)*step ||
-						quadVector[i][j].b.y <=k*step && quadVector[i][j].b.y>=(k-1)*step || quadVector[i][j].d.y <k*step && quadVector[i][j].d.y>=(k-1)*step)
-						i_l.push_back(Point(i,j));
-					if (quadVector[i][j].a.y>=(cdst.cols/step)*step ||quadVector[i][j].c.y>=(cdst.cols/step)*step ||
-						quadVector[i][j].b.y>=(cdst.cols/step)*step ||quadVector[i][j].d.y>=(cdst.cols/step)*step )
-						i_m.push_back(Point(i,j));
-					i++;
-				}
-				coord.push_back(i_l);
-				i_l.clear();
-		}
-		coord.push_back(i_m);
-		i_m.clear();
-		//dst.release();
-		//
-		//search of line crosses
-		//
-
-		int ned =0;	
-		for( auto i = lines.begin(); i!=lines.end(); i++)
-		{
-			Vec4i l = *i;     
-			for(auto j =i+1; j != lines.end(); j++) 
+			for (int i=0; i<n/2-1; i++) 
 			{
-				Vec4i p = *j;  
-				pt2=planeInters(Point(l[0],l[1]),Point(l[2],l[3]),Point(p[0],p[1]),Point(p[2],p[3])); // точка пересечения двух прямых в плоскости 
-				//
-				//vector choosing with necessary index
-				//
-
-				i_l.clear();
-				i_m.clear(); //create additional vector
-				ix_r.clear();
-				if (pt2.y<=0)
-				{
-					i_l=coord_x0[0];
-					i_m=coord[0];
-				}
-				else
-					if (pt2.y>=cdst.rows)
+				for (int j=0; j<n; j++)
+					if (belong_to_quad(quadVector[i][j],pt2)) // checking  point belonging to the quadVector
 					{
-						i_l =coord_x0[1];
-						i_m =coord[coord.size()-1];
+						quadVector[i][j].s++;
+						quadVector[i][j].sum_x+=pt2.x;
+						quadVector[i][j].sum_y+=pt2.y;
+						break;					
 					}
-					else
-						//point lies inside the image
-					{
-						ind =ceil((double( pt2.y/step)));
-						i_l=coord[ind];
-						if (ind==0)
-						{ 
-							i_m=coord_x0[0];
-							ix_r=coord[ind+1];
-						}
-						else 
-							if (ind==coord.size()-1)
-							{
-								i_m=coord[ind-1];
-								ix_r=coord_x0[1];
-							}
-							else 
-							{
-								i_m=coord[ind-1];
-								ix_r=coord[ind+1];
-							}
-
-					}
-					bool per=1;
-
-					for (size_t k= 0; k <i_l.size(); k++) 
-					{
-						if (belong_to_quad(quadVector[i_l[k].x][i_l[k].y],pt2)) // checking  point belonging to the quadVector
-						{
-							quadVector[i_l[k].x][i_l[k].y].s++;
-							quadVector[i_l[k].x][i_l[k].y].sum_x+=pt2.x;
-							quadVector[i_l[k].x][i_l[k].y].sum_y+=pt2.y;
-							per =0;
-							break;					
-						}
-					}
-
-					// if flag per==1 we continue search in neighbor strip
-					if (per ==1 && i_m.size()>0)
-						for (size_t k= 0; k <i_m.size(); k++) 
-						{
-							if (belong_to_quad(quadVector[i_m[k].x][i_m[k].y],pt2)) // checking  point belonging to the quadVector
-							{
-								quadVector[i_m[k].x][i_m[k].y].s++;
-								quadVector[i_m[k].x][i_m[k].y].sum_x+=pt2.x;
-								quadVector[i_m[k].x][i_m[k].y].sum_y+=pt2.y;
-								per =0;
-								break;					
-							}
-						}
-						if (per ==1 && ix_r.size()>0)
-							for (size_t k= 0; k <ix_r.size(); k++) 
-							{
-								if (belong_to_quad(quadVector[ix_r[k].x][ix_r[k].y],pt2)) // checking  point belonging to the quadVector
-								{
-									quadVector[ix_r[k].x][ix_r[k].y].s++;
-									quadVector[ix_r[k].x][ix_r[k].y].sum_x+=pt2.x;
-									quadVector[ix_r[k].x][ix_r[k].y].sum_y+=pt2.y;
-									per =0;
-									break;					
-								}
-							}
-
-							if (per ==1) 
-							{
-								ned++;
-								circle(cdst,pt2,5, Scalar(0,150,150),5, 8, 0);
-							} //points that are not found (they appear when eps is low in belonging fuction)
-			}   
-
+			}
 		}
-		//maximum(s) search 
-		//
-		vector<Point> r;
-		r=max_search(n, quadVector);
-		circle(cdst,r[0],5, Scalar(255,0,0),5, 8, 0);
-		circle(cdst,r[1],5, Scalar(255,0,0),5, 8, 0);
+	}
+	//maximum(s) search 
+	//
 
-		// convert matrix
-		//CvMat* warp_matrix = cvCreateMat(3,3,CV_32FC1);
-		Mat warp_matrix(3,3,CV_32FC1);
-		IplImage *src1=0, *dst1=0;
-		//src1 = cvLoadImage(filename,1);
+	vector<Point> r;
+	r=max_search(n, quadVector);
+	circle(cdst,r[0],5, Scalar(255,0,0),5, 8, 0);
+	circle(cdst,r[1],5, Scalar(255,0,0),5, 8, 0);
+	circle(cdst,r[2],5, Scalar(255,0,0),5, 8, 0);
+	ofstream fout("cppstudioTest1.txt"); // создаём объект класса ofstream для записи и связываем его с файлом cppstudio.txt
+	for (int i=0; i<n/2-1; i++) 
+	{
+		for (int j=0; j<n; j++)
+		{
+			fout<<quadVector[i][j].s<<" ";
+		}
+		fout<<endl;
+	}
+	fout.close();
 
-		//		setting one element 
-		//		void  cvmSet( CvMat* mat, int row, int col, double value );
-		//   
-		//  calculate the equation of vanishing line using cross product
-		double x,y,x1,y1,a1,b;
-		x=r[0].x; 
-		y=r[0].y;
-		x1=r[1].x; 
-		y1=r[1].y;
-		b = x*y1 - x1*y;
-		a1= (y-y1)/b;
-		b= (x1-x)/b;
-		//  a1*x - y+ b = 0
-		//  lead to this form:  a1/b *x  - y/b + 1 = 0
+	// convert matrix
+	//CvMat* warp_matrix = cvCreateMat(3,3,CV_32FC1);
+	Mat warp_matrix(3,3,CV_32FC1);
+	IplImage *src1=0, *dst1=0;
+	//src1 = cvLoadImage(filename,1);
 
-		//matrix H
+	//		setting one element 
+	//		void  cvmSet( CvMat* mat, int row, int col, double value );
+	//   
+	//  calculate the equation of vanishing line using cross product
+	double x,y,x1,y1,a1,b;
+	x=r[0].x; 
+	y=r[0].y;
+	x1=r[1].x; 
+	y1=r[1].y;
+	b = x*y1 - x1*y;
+	a1= (y-y1)/b;
+	b= (x1-x)/b;
+	//  a1*x - y+ b = 0
+	//  lead to this form:  a1/b *x  - y/b + 1 = 0
 
-		warp_matrix.at<float>(0,0) =  x; 
-		warp_matrix.at<float>(1,0) =  y; 
-		warp_matrix.at<float>(2,0) =  1;                // a*x +b*y +c =0
-		warp_matrix.at<float>(0,1) =  x1; 
-		warp_matrix.at<float>(1,1) =  y1; 
-		warp_matrix.at<float>(2,1) =  1; 
-		warp_matrix.at<float>(0,2) =  a1; 
-		warp_matrix.at<float>(1,2) =  b; 
-		warp_matrix.at<float>(2,2) =  1; 
+	//matrix H
 
-		//	cout<<ned<<" ned"<<endl;
-		// convert prospects
-		std::cout << warp_matrix << std::endl;
-		warpPerspective(src, dst, warp_matrix, cv::Size(3000,3000));
+	warp_matrix.at<float>(0,0) =  x; 
+	warp_matrix.at<float>(1,0) =  y; 
+	warp_matrix.at<float>(2,0) =  1;                // a*x +b*y +c =0
+	warp_matrix.at<float>(0,1) =  x1; 
+	warp_matrix.at<float>(1,1) =  y1; 
+	warp_matrix.at<float>(2,1) =  1; 
+	warp_matrix.at<float>(0,2) =  a1; 
+	warp_matrix.at<float>(1,2) =  b; 
+	warp_matrix.at<float>(2,2) =  1; 
 
-		namedWindow("warpPerspective",WINDOW_NORMAL);
-		imshow("warpPerspective", dst);
-		waitKey();
+	//	cout<<ned<<" ned"<<endl;
+	// convert prospects
+	std::cout << warp_matrix << std::endl;
+	warpPerspective(src, dst, warp_matrix, cv::Size(3000,3000));
 
-		namedWindow("detected lines0",WINDOW_NORMAL);
-		imshow("detected lines0", cdst);
-		imwrite("detected lines0.jpg", cdst);
+	namedWindow("warpPerspective",WINDOW_NORMAL);
+	imshow("warpPerspective", dst);
+	waitKey();
 
-		waitKey();
-		return 0;
+	namedWindow("detected lines0",WINDOW_NORMAL);
+	imshow("detected lines0", cdst);
+	imwrite("detected lines0.jpg", cdst);
+
+	waitKey();
+	return 0;
 }
