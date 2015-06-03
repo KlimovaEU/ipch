@@ -24,7 +24,7 @@ struct quad
 {
 	Point a, b, c, d; 
 	int s;												 // кол-во точек
-	unsigned long long int sum_x, sum_y;                 // суммарное значение по координате
+	long long int sum_x, sum_y;                 // суммарное значение по координате
 } ;
 
 
@@ -351,7 +351,7 @@ int main(int argc, char** argv)
 	threshold(dst,dst,80,180,THRESH_BINARY);
 	cvtColor( dst, cdst, CV_GRAY2BGR); 
 	vector<Vec4i> lines;
-	HoughLinesP(dst, lines, 1, CV_PI/180, 50, 20, 10 );
+	HoughLinesP(dst, lines, 1, CV_PI/180, 50, 30, 10 );
 	cout<<dst.cols<<" "<<dst.rows<<endl;
 	double h=dst.cols/50;
 	vector<Point> a_begin,a_end;
