@@ -5,9 +5,11 @@
 #include <iostream>
 #include <cmath>
 #define PI 3.14159265
-#include  <opencv\cv.h>
+#include <opencv\cv.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stddef.h>
+#include <fstream>
 
 using namespace cv;
 using namespace std;
@@ -24,7 +26,8 @@ struct quad
 {
 	Point a, b, c, d; 
 	int s;												 // кол-во точек
-	long long int sum_x, sum_y;                 // суммарное значение по координате
+	long long int sum_x, sum_y;				// суммарное значение по координате
+	
 } ;
 
 
@@ -33,10 +36,12 @@ Point inters(struct sphere sph, int i, int j,int n)
 	double sphx =sph.x, sphy = sph.y, sphd =sph.d;
 	double x,y,z;
 	i = i % (n+1);
+
 	j = j % (n+1);
 	x=sphd *sin (2*PI*i/n)*cos(2*PI*j/n)/ 2 + sphx;
 	y=sphd *sin (2*PI*i/n)*sin(2*PI*j/n)/ 2 + sphy;
 	z=sphd *cos (2*PI*i/n)/2 + sphd/2;
+	
 	double l =x-sphx;
 	double m =y-sphy;
 	double p =z-sphd;
@@ -112,7 +117,7 @@ bool belong_to_quad ( struct quad q , Point a)
 	s2+= squareTriangle(q.a, q.c, a);
 	s2+= squareTriangle(q.c, q.d, a);
 	s2+= squareTriangle(q.d, q.b, a);
-	if (abs(s1-s2)>1) b=0;
+	if (abs(s1-s2)>0.5) b=0;
 	else b=1;
 	//	cout<<abs(s1-s2)<<endl;
 	return b;
@@ -271,18 +276,37 @@ Mat image_return (const char* filename)
 	//return  src(Rect(up.x,0, cdst.cols -lim.x-2, cdst.rows-1)).clone();
 	return  src(Rect(0,0,s,cdst.rows)).clone();
 }
+Point centre(vector<Point> v) // centre search of one cell
+{
+	int k_min;
+	vector<double> dist;
+	double s=0,s_min;
+	for (size_t i=0; i<v.size();i++)
+	{
+		for(size_t j=0;j<v.size(); j++)
+		{
+			s+=sqrt(double((v[i].x-v[j].x)*(v[i].x-v[j].x)+ (v[i].y-v[j].y)*(v[i].y-v[j].y)));
+		}
+		dist.push_back(s);
+		s=0;
+	} 
+	s_min=dist[1];
+	for (size_t i=1; i<dist.size();i++)
+		if (dist[i]<s_min)
+		{
+			k_min=i;
+			s_min=dist[i];
+		}
+	return v[k_min];	
+}
 vector<Point> max_search(int n, vector<vector<quad>> quadVector)
 {
-		Point ind1=Point(0,0), ind2=Point(0,0),ind3 =Point(0,0);
-		int max2=quadVector[0][0].s;
-		int max1=quadVector[0][0].s;
-		int max3=quadVector[0][0].s;
+		Point ind1=Point(10,10);
+		int max1=quadVector[10][10].s;
 		vector<Point> r;
-		for (int i=1; i<n/2; i++)
+		for (int i=0; i<n/2-1; i++)
 			for( int j = 0; j <n; j++)
 			{
-				i--;
-				cout<<i<<" "<<j<<endl;
 				if (i>0&& i<(n/2-2) &&  j>0 && j<n-1 && quadVector[i][j].s>quadVector[i-1][j].s &&quadVector[i][j].s>quadVector[i-1][j-1].s&& quadVector[i][j].s>quadVector[i-1][j+1].s&&
 					quadVector[i][j].s>quadVector[i][j+1].s && quadVector[i][j].s>quadVector[i][j-1].s && quadVector[i][j].s>quadVector[i+1][j+1].s && quadVector[i][j].s>quadVector[i+1][j-1].s && quadVector[i][j].s>quadVector[i+1][j].s ||
 					i==0 && j>0&& j<n-1 && quadVector[i][j].s>quadVector[i+1][j].s&& quadVector[i][j].s>quadVector[i][j+1].s&& quadVector[i][j].s>quadVector[i][j-1].s ||
@@ -292,75 +316,32 @@ vector<Point> max_search(int n, vector<vector<quad>> quadVector)
 				{
 					if (quadVector[i][j].s>max1)
 					{   
-						max3 =max2;
-						ind3 =ind2;
-						max2 =max1;
-						ind2 =ind1;
 						max1 =quadVector[i][j].s;
 						ind1 =Point(i,j);
 					}
-					else 
-						if (quadVector[i][j].s>max2)
-						{
-							max3 =max2;
-							ind3 =ind2;
-							max2 = quadVector[i][j].s;
-							ind2 = Point(i,j);
-						}
-						else 
-							if(quadVector[i][j].s>max3)
-							{
-								max3 = quadVector[i][j].s;
-								ind3 = Point(i,j);
-							}
 				}
-				i++; 
 			}
 			
-			double x,y, x1,y1,a1,b, x2,y2;
+			double x,y;
 			x =(quadVector[ind1.x][ind1.y].sum_x/quadVector[ind1.x][ind1.y].s);
 			y =(quadVector[ind1.x][ind1.y].sum_y/quadVector[ind1.x][ind1.y].s);
 			cout<<"x "<<x<<" y "<<y<<endl;
 			r.push_back(Point(x,y));
-
-			x1=(quadVector[ind2.x][ind2.y].sum_x/quadVector[ind2.x][ind2.y].s);
-			y1=(quadVector[ind2.x][ind2.y].sum_y/quadVector[ind2.x][ind2.y].s);
-			cout<<"x1 "<<x1<<" y1 "<<y1<<endl;
-			r.push_back(Point(x1,y1));
-
-			x2 =(quadVector[ind3.x][ind3.y].sum_x/quadVector[ind3.x][ind3.y].s);
-			y2 =(quadVector[ind3.x][ind3.y].sum_y/quadVector[ind3.x][ind3.y].s);
-			cout<<"x2 "<<x2<<" y2 "<<y2<<endl;
-			r.push_back(Point(x2,y2));
-
-			cout<<ind1.x<<" "<<ind1.y<<endl;
-			cout<<ind2.x<<" "<<ind2.y<<endl;
+			cout<<"coord "<<ind1.x<<" "<<ind1.y<<endl;
+			r.push_back(ind1);
 			return r;
 }
-
-int main(int argc, char** argv)
+vector<Point> body_function (vector<Vec4i> lines, Mat cdst, int k, int k_num)
 {
-	const char* filename = argc > 1 ? argv[1] : "test1.jpeg";
-	//	Mat src = imread(filename,0);    
-	Mat src =image_return( filename);
+	
+//	cout<<cdst.cols<<" "<<cdst.rows<<endl;
 	Point pt3,pt2;
-	Mat dst, abs_dst,gray,cdst;
-	GaussianBlur( src,abs_dst, Size(3,3), 1, 0, BORDER_DEFAULT );
-	Laplacian(abs_dst, dst, CV_16S, 3, 1, 0, BORDER_DEFAULT );
-	convertScaleAbs(dst, dst);
-	threshold(dst,dst,80,180,THRESH_BINARY);
-	cvtColor( dst, cdst, CV_GRAY2BGR); 
-	vector<Vec4i> lines;
-	HoughLinesP(dst, lines, 1, CV_PI/180, 50, 30, 10 );
-	cout<<dst.cols<<" "<<dst.rows<<endl;
-	double h=dst.cols/50;
 	vector<Point> a_begin,a_end;
 	for( size_t i = 0; i < lines.size(); i++ )
 	{   
 		Vec4i l = lines[i];
-		if (h<length(Point(l[0], l[1]),Point(l[2], l[3])))
-			line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 4, CV_AA);
-
+		if (k==k_num)
+		line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 4, CV_AA);
 	}	
 	const int n=30;    // number of meridians
 	const int nn =n*n; 
@@ -368,13 +349,9 @@ int main(int argc, char** argv)
 	// centre coord (x,y) 
 	sph.x =int( cdst.cols /2);
 	sph.y =int( cdst.rows /2);
-	cout<< cdst.cols <<" "<< cdst.rows<<endl;
 	sph.d = min(cdst.cols,cdst.rows);
 	double a=1.5*PI;
-	int step =400;
 	int ind;
-	vector<Point> index_list,i_l,ix_r1, ix_r,i_m,ix_l,ix_l1;
-	vector<vector<Point>> coord,coord_x0,coord_xrows;
 	quad q;
 	vector <vector<quad>> quadVector;
 	//
@@ -390,63 +367,125 @@ int main(int argc, char** argv)
 			q.sum_x=0;
 			q.sum_y=0;
 			q.a = inters(sph,i,j,n);  
-			circle(cdst,q.a,5, Scalar(0,255,0),5, 8, 0);
 
 			q.b = inters(sph,i,j+1,n);  
 			q.c = inters(sph,i+1,j,n);
 			q.d = inters(sph,i+1,j+1,n); 
-			if(i==14)
+			if (k==k_num)
 			{
+				circle(cdst,q.a,5, Scalar(0,255,0),5, 8, 0);
 				line( cdst, q.a, q.b, Scalar( 150,0,150 ),  2, 8 );
 				line( cdst, q.a, q.c, Scalar( 150,0,150 ),  2, 8 );
 				line( cdst, q.d, q.c, Scalar( 150,0,150 ),  2, 8 );
 				line( cdst, q.d, q.b, Scalar( 150,0,150 ),  2, 8 );
 			}
+			
 			quadVector[i-1][j]=q;
-			cout<<i-1<<" "<<j<<endl;
+
 		}
 	}
 
-	for( auto i = lines.begin(); i!=lines.end(); i++)
-	{
-		Vec4i l = *i;     
-		for(auto j =i+1; j != lines.end(); j++) 
+	bool bbreak=0;
+		for( auto i = lines.begin(); i!=lines.end(); i++)
 		{
-			Vec4i p = *j; 
-			pt2=planeInters(Point(l[0],l[1]),Point(l[2],l[3]),Point(p[0],p[1]),Point(p[2],p[3])); // точка пересечения двух прямых в плоскости 
+			Vec4i l = *i;     
+			for(auto j =i+1; j != lines.end(); j++) 
+			{
+				Vec4i p = *j; 
+				pt2=planeInters(Point(l[0],l[1]),Point(l[2],l[3]),Point(p[0],p[1]),Point(p[2],p[3])); // точка пересечения двух прямых в плоскости 
+				bbreak=0;
+				for (int i=0; i<n/2-1; i++) 
+				{
+					for (int j=0; j<n; j++)
+					if (belong_to_quad(quadVector[i][j],pt2)) // checking  point belonging to the quadVector
+					{
+							quadVector[i][j].s++;
+							quadVector[i][j].sum_x+=pt2.x;
+							quadVector[i][j].sum_y+=pt2.y;	
+							bbreak =1;
+							break;					
+					}	
+					if (bbreak==1)
+					break;
+				}   
+			}
+		}
+		//maximum(s) search 
+		//
+		vector<Point> r,r1;
+		r=max_search(n, quadVector);
 
+		if (k==1)
+		{
+			ofstream fout("cppstudioH50.txt"); // файл строится по самому внутренней функции, для последней найденной точки схода
 			for (int i=0; i<n/2-1; i++) 
 			{
 				for (int j=0; j<n; j++)
-					if (belong_to_quad(quadVector[i][j],pt2)) // checking  point belonging to the quadVector
-					{
-						quadVector[i][j].s++;
-						quadVector[i][j].sum_x+=pt2.x;
-						quadVector[i][j].sum_y+=pt2.y;
-						break;					
-					}
+				{
+					fout<<quadVector[i][j].s<<" ";
+				}
+				fout<<endl;
 			}
+			fout.close();
+			return r;
 		}
-	}
-	//maximum(s) search 
-	//
+		else
+		{
+			vector<Vec4i> lines1;
+			for( auto i = lines.begin(); i!=lines.end(); i++)
+			{
+				Vec4i l = *i;   
+				bbreak=0;
+				for(auto j =lines.begin(); j != lines.end(); j++) 
+					if ( i!=j)
+					{  
+						Vec4i p = *j; 
+						pt2=planeInters(Point(l[0],l[1]),Point(l[2],l[3]),Point(p[0],p[1]),Point(p[2],p[3])); // точка пересечения двух прямых в плоскости 
+						if (belong_to_quad(quadVector[r[1].x][r[1].y],pt2)) // checking  point belonging to the quadVector
+						{
+							bbreak =1;
+							break;					
+						}	
+					}  
+				if (bbreak==0)
+				{
+						lines1.push_back(l);
+						line( cdst, Point(l[0],l[1]),Point(l[2],l[3]), Scalar( 150,0,150 ),  2, 4 );
+				}
+						
+			}
+
+			r1 =body_function( lines1, cdst,k-1,k_num);
+			r1.push_back(r[0]);
+			r1.push_back(r[1]);
+			if (k==k_num)
+			{
+				namedWindow("detected",WINDOW_NORMAL);
+				imshow("detected", cdst);
+				imwrite("detected_body_func.jpg", cdst);
+			}
+			return r1;
+		}
+ 
+
+}
+
+int main(int argc, char** argv)
+{
+	const char* filename = argc >1 ? argv[1] : "test1.jpeg";
+	//	Mat src = imread(filename,0);    
+	Mat src =image_return( filename);
+	Mat dst, abs_dst,gray,cdst;
+	GaussianBlur( src,abs_dst, Size(3,3), 1, 0, BORDER_DEFAULT );
+	Laplacian(abs_dst, dst, CV_16S, 3, 1, 0, BORDER_DEFAULT );
+	convertScaleAbs(dst, dst);
+	threshold(dst,dst,80,180,THRESH_BINARY);
+	cvtColor( dst, cdst, CV_GRAY2BGR); 
+	vector<Vec4i> lines;
+	HoughLinesP(dst, lines, 1, CV_PI/180, 50, 40, 10 );
 
 	vector<Point> r;
-	r=max_search(n, quadVector);
-	circle(cdst,r[0],5, Scalar(255,0,0),5, 8, 0);
-	circle(cdst,r[1],5, Scalar(255,0,0),5, 8, 0);
-	circle(cdst,r[2],5, Scalar(255,0,0),5, 8, 0);
-	ofstream fout("cppstudioTest1.txt"); // создаём объект класса ofstream для записи и связываем его с файлом cppstudio.txt
-	for (int i=0; i<n/2-1; i++) 
-	{
-		for (int j=0; j<n; j++)
-		{
-			fout<<quadVector[i][j].s<<" ";
-		}
-		fout<<endl;
-	}
-	fout.close();
-
+	r=body_function (lines, cdst,2,2);
 	// convert matrix
 	//CvMat* warp_matrix = cvCreateMat(3,3,CV_32FC1);
 	Mat warp_matrix(3,3,CV_32FC1);
@@ -460,8 +499,9 @@ int main(int argc, char** argv)
 	double x,y,x1,y1,a1,b;
 	x=r[0].x; 
 	y=r[0].y;
-	x1=r[1].x; 
-	y1=r[1].y;
+	x1=r[2].x; 
+	y1=r[2].y;
+
 	b = x*y1 - x1*y;
 	a1= (y-y1)/b;
 	b= (x1-x)/b;
@@ -488,10 +528,6 @@ int main(int argc, char** argv)
 	namedWindow("warpPerspective",WINDOW_NORMAL);
 	imshow("warpPerspective", dst);
 	waitKey();
-
-	namedWindow("detected lines0",WINDOW_NORMAL);
-	imshow("detected lines0", cdst);
-	imwrite("detected lines0.jpg", cdst);
 
 	waitKey();
 	return 0;
