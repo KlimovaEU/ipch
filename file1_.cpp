@@ -516,8 +516,8 @@ vector<Point> body_function (vector<Vec4i> lines, Mat cdst, int k, int k_num)
 			cout<<"centre of cluster "<<pt2<<endl;
 			imwrite("detected_body_func3.jpg", cdst);
 			r1 =body_function( lines1, cdst,k-1,k_num);
-			r1.push_back(pt3);
-			//r1.push_back(r[0]); r1.push_back(r[1]);
+		//	r1.push_back(pt3);
+			r1.push_back(r[0]); r1.push_back(r[1]);
 			if (k==2)
 			{
 				namedWindow("detected3",WINDOW_NORMAL);
