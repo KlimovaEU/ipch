@@ -1,0 +1,99 @@
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include <vector>
+#include <iostream>
+#include <cmath>
+#define PI 3.14159265
+#include <opencv\cv.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stddef.h>
+#include <fstream>
+
+using namespace cv;
+using namespace std;
+
+
+int main(int argc, char** argv)
+{
+	const char* filename = argc >1 ? argv[1] : "test8.jpg";
+	Mat src = imread(filename,0);    
+	Mat warp_matrix(3,3,CV_64FC1),af_matrix(3,3,CV_64FC1);
+	Mat dst;
+	double x,y,x1,y1,x2,y2;
+	cout<<src.rows;
+
+	Mat m = Mat::zeros(12, 13, CV_64FC1); // m=eq_system
+
+	x=4390; y =1806;
+	x1=1996 ; y1= -19229;
+	x2=-2013;  y2= 1844;
+	for (int i=0; i<12 ;i++)
+	{
+		m.at<double>(i,i) =  1.0; 
+	}
+
+	m.at<double>(0,9) =  -x; 
+	m.at<double>(1,9) =  -y; 
+	m.at<double>(2,9) =  -1; 
+	
+	m.at<double>(3,10) =  -x1; 
+	m.at<double>(4,10) =  -y1; 
+	m.at<double>(5,10) =  -1; 
+
+	m.at<double>(8,11) =  1.0; 
+
+	m.at<double>(9,0) =  src.cols; 
+	m.at<double>(10,1) = src.cols;  
+	m.at<double>(11,2) = src.cols;  
+
+	m.at<double>(9,3) =  src.rows; 
+	m.at<double>(10,4) = src.rows;  
+	m.at<double>(11,5) = src.rows;  
+
+	m.at<double>(9,6) =  1; 
+	m.at<double>(10,7) = 1;  
+	m.at<double>(11,8) = 1;  
+
+	m.at<double>(9,12) = -1* src.cols; 
+	m.at<double>(10,12) = -1* src.rows;  
+	m.at<double>(11,12) = -1;  
+
+	Mat w1, u, vt;
+	SVD::compute(m, w1, u, vt);
+	ofstream fout("cppM.txt"); 
+		
+	fout<<m;
+
+	fout.close();
+	Mat b = Mat::zeros(13, 1, CV_64FC1);
+	double k;
+	cout<<w1.cols<<" "<<w1.rows<<endl;
+	cout<<u.cols<<" "<<u.rows<<endl;
+	cout<<vt.rows <<" "<<vt.cols<<endl;
+	for (int i=0; i<13 ;i++)
+	{
+		b.at<double>(i,0) = vt.at<double>(11,i); 
+	}
+
+	warp_matrix.at<double>(0,0) =  b.at<double>(0,0); 
+	warp_matrix.at<double>(1,0) =  b.at<double>(1,0);
+	warp_matrix.at<double>(2,0) =  b.at<double>(2,0);               
+	warp_matrix.at<double>(0,1) =  b.at<double>(3,0); 
+	warp_matrix.at<double>(1,1) =  b.at<double>(4,0); 
+	warp_matrix.at<double>(2,1) =  b.at<double>(5,0); 
+	warp_matrix.at<double>(0,2) =  b.at<double>(6,0); 
+	warp_matrix.at<double>(1,2) =  b.at<double>(7,0); 
+	warp_matrix.at<double>(2,2) =  b.at<double>(8,0);
+
+	Mat w=warp_matrix.inv();
+	std::cout << w << std::endl;
+	warpPerspective(src, dst, w, cv::Size(src.cols,src.rows));
+	
+	namedWindow("warpP",WINDOW_NORMAL);
+	imshow("warpP", dst);
+	imwrite("warpP.jpg", dst);
+
+	waitKey();
+	return 0;
+}
